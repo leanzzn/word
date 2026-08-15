@@ -202,6 +202,8 @@ const toBase64 = async file => {
 /* ── 화면 전환 ────────────────────────────────────────── */
 let book = null, unitNames = [], unitIdx = 0, qs = [], qi = 0, locked = false;
 
+const WRONG_MSG = '틀렸어 븅딱아ㅋㅋ.  다시 풀어';
+
 function view(id) {
   ['library', 'wrong', 'units', 'quiz', 'done'].forEach(v =>
     $('#v-' + v).classList.toggle('hide', v !== id));
@@ -411,7 +413,7 @@ function pickMc(btn, correct) {
     btn.className = 'opt wrong';
     btn.disabled = true;
     logWrong(qs[qi]);
-    say(false, '틀렸습니다. 다시 골라보세요.');
+    say(false, WRONG_MSG);
   }
 }
 
@@ -425,7 +427,7 @@ $('#submit').onclick = async () => {
     say(true, `정답! ${w.en} = ${w.ko}`);      // 뜻이 여러 개면 전부 보여준다
   } else {
     logWrong(qs[qi]);
-    say(false, '틀렸습니다. 다시 입력해보세요.');
+    say(false, WRONG_MSG);
     $('#answer').select();
   }
 };
