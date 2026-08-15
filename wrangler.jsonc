@@ -1,0 +1,12 @@
+{
+  "name": "word",
+  "main": "worker.js",
+  "compatibility_date": "2026-08-01",
+  "assets": { "directory": "./static", "binding": "ASSETS" },
+  "kv_namespaces": [
+    { "binding": "WORDS", "id": "56328fbcc9434c4ea9b5cd763f151a86" }
+  ]
+  // 비밀값은 코드에 넣지 않는다:
+  //   npx wrangler secret put GEMINI_API_KEY
+  //   npx wrangler secret put APP_PASSWORD
+}

@@ -5,3 +5,5 @@ __pycache__/
 .venv/
 node_modules/
 .wrangler/
+.app-password.txt
+test-wordbook.pdf
