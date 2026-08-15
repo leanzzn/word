@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>내 단어장</title>
+<style>
+  :root { --bg:#f7f7f8; --card:#fff; --line:#e3e3e8; --txt:#1c1c1e;
+          --sub:#6b6b73; --main:#2f6bff; --ok:#12a150; --no:#e5484d; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--txt); font-size:17px;
+         font-family:-apple-system,"Segoe UI","Malgun Gothic",sans-serif; }
+  .wrap { max-width:520px; margin:0 auto; padding:20px 16px 60px; }
+  h1 { font-size:22px; margin:0 0 4px; }
+  .sub { color:var(--sub); font-size:14px; margin:0 0 20px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px;
+          padding:16px; margin-bottom:10px; }
+  .row { display:flex; align-items:center; gap:10px; }
+  .grow { flex:1; min-width:0; }
+  button { font:inherit; border:0; border-radius:10px; padding:12px 16px;
+           background:var(--main); color:#fff; cursor:pointer; }
+  button:disabled { background:#c9cad0; cursor:not-allowed; }
+  button.ghost { background:#eceef3; color:var(--txt); }
+  button.link { background:none; color:var(--sub); padding:6px; font-size:14px; }
+  input[type=text] { font:inherit; width:100%; padding:14px; border-radius:10px;
+                     border:1px solid var(--line); }
+  .clickable { cursor:pointer; }
+  .clickable:hover { border-color:var(--main); }
+  .muted { color:var(--sub); font-size:14px; }
+  .bar { height:6px; background:#e6e6ea; border-radius:99px; overflow:hidden; margin-bottom:16px; }
+  .bar > i { display:block; height:100%; background:var(--main); transition:width .25s; }
+  .q { font-size:15px; color:var(--sub); margin-bottom:8px; }
+  .prompt { font-size:30px; font-weight:700; text-align:center; margin:24px 0 28px;
+            word-break:break-word; }
+  .opt { display:block; width:100%; text-align:left; background:var(--card);
+         border:1px solid var(--line); color:var(--txt); margin-bottom:8px; padding:15px; }
+  .opt:hover:not(:disabled) { border-color:var(--main); }
+  .opt.right { border-color:var(--ok); background:#eaf7f0; color:var(--ok); font-weight:700; }
+  .opt.wrong { border-color:var(--no); background:#fdeeee; color:var(--no); }
+  .fb { min-height:26px; margin:14px 0; text-align:center; font-weight:600; }
+  .fb.ok { color:var(--ok); } .fb.no { color:var(--no); }
+  .hide { display:none; }
+  .center { text-align:center; }
+  .big { font-size:48px; margin:20px 0 8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- ── 보관함 ───────────────────────────────────────────── -->
+<section id="v-library">
+  <h1>내 단어장</h1>
+  <p class="sub">PDF를 올리면 한 번만 분석해서 저장해둡니다.</p>
+  <button class="ghost" style="width:100%; margin-bottom:10px" onclick="showWrong()">
+    📕 오답노트 <span id="wrongCount"></span></button>
+  <div class="card">
+    <div class="row">
+      <input type="file" id="pdf" accept="application/pdf" class="grow">
+      <button id="up">올리기</button>
+    </div>
+    <p class="muted" id="upmsg" style="margin:10px 0 0"></p>
+  </div>
+  <div id="books"></div>
+</section>
+
+<!-- ── 오답노트 ─────────────────────────────────────────── -->
+<section id="v-wrong" class="hide">
+  <button class="link" onclick="showLibrary()">← 보관함</button>
+  <h1>오답노트</h1>
+  <p class="sub">퀴즈에서 틀린 단어만 모아둡니다. 외운 건 지우세요.</p>
+  <div id="wrongList"></div>
+  <button class="ghost hide" id="clearWrong" style="width:100%; margin-top:10px">전체 비우기</button>
+</section>
+
+<!-- ── 유닛 선택 ────────────────────────────────────────── -->
+<section id="v-units" class="hide">
+  <button class="link" onclick="showLibrary()">← 보관함</button>
+  <h1 id="bookName"></h1>
+  <p class="sub">유닛을 고르면 20문제가 시작됩니다.</p>
+  <div id="units"></div>
+</section>
+
+<!-- ── 퀴즈 ─────────────────────────────────────────────── -->
+<section id="v-quiz" class="hide">
+  <button class="link" onclick="showUnits()">← 유닛 선택</button>
+  <div class="bar"><i id="bar" style="width:0%"></i></div>
+  <div class="q" id="qinfo"></div>
+  <div class="prompt" id="prompt"></div>
+
+  <div id="mc"></div>
+
+  <div id="sa" class="hide">
+    <input type="text" id="answer" placeholder="한글 뜻을 입력하세요" autocomplete="off">
+    <button id="submit" style="width:100%; margin-top:8px">확인</button>
+  </div>
+
+  <div class="fb" id="fb"></div>
+  <button id="next" style="width:100%" disabled>다음 문제</button>
+</section>
+
+<!-- ── 완료 ─────────────────────────────────────────────── -->
+<section id="v-done" class="hide center">
+  <div class="big">🎉</div>
+  <h1 id="doneTitle"></h1>
+  <p class="sub">20문제 모두 맞혔습니다.</p>
+  <button id="nextUnit" style="width:100%; margin-bottom:8px">다음 유닛으로 넘어가기</button>
+  <button class="ghost" style="width:100%" onclick="showUnits()">유닛 목록</button>
+</section>
+
+</div>
+<script>
+const $ = s => document.querySelector(s);
+const api = (u, o) => fetch(u, o).then(r => r.ok ? r.json()
+  : r.json().then(e => Promise.reject(e.detail || '오류')));
+const shuffle = a => a.map(v => [Math.random(), v]).sort((x, y) => x[0] - y[0]).map(x => x[1]);
+
+let book = null, unitNames = [], unitIdx = 0, qs = [], qi = 0, locked = false;
+
+function view(id) {
+  ['library', 'wrong', 'units', 'quiz', 'done'].forEach(v =>
+    $('#v-' + v).classList.toggle('hide', v !== id));
+  window.scrollTo(0, 0);
+}
+
+/* ── 보관함 ── */
+async function showLibrary() {
+  view('library');
+  api('/api/wrong').then(w => $('#wrongCount').textContent = w.length ? `(${w.length})` : '');
+  const books = await api('/api/books');
+  $('#books').innerHTML = books.length ? '' : '<p class="muted">아직 올린 단어장이 없습니다.</p>';
+  books.forEach(b => {
+    const el = document.createElement('div');
+    el.className = 'card row';
+    el.innerHTML = `<div class="grow clickable"><b>${b.name}</b>
+      <div class="muted">${b.units}개 유닛 · ${b.words}개 단어</div></div>
+      <button class="link">삭제</button>`;
+    el.firstElementChild.onclick = () => openBook(b.id);
+    el.querySelector('button').onclick = async () => {
+      if (!confirm(`"${b.name}" 를 삭제할까요?`)) return;
+      await api('/api/books/' + b.id, { method: 'DELETE' });
+      showLibrary();
+    };
+    $('#books').append(el);
+  });
+}
+
+$('#up').onclick = async () => {
+  const f = $('#pdf').files[0];
+  if (!f) return alert('PDF 파일을 선택해주세요.');
+  const fd = new FormData(); fd.append('file', f);
+  $('#up').disabled = true;
+  $('#upmsg').textContent = '분석 중입니다... 단어 수에 따라 1~2분 걸릴 수 있습니다.';
+  try {
+    await api('/api/books', { method: 'POST', body: fd });
+    $('#upmsg').textContent = '완료!'; $('#pdf').value = '';
+    showLibrary();
+  } catch (e) { $('#upmsg').textContent = '실패: ' + e; }
+  $('#up').disabled = false;
+};
+
+/* ── 오답노트 ── */
+async function showWrong() {
+  view('wrong');
+  const list = await api('/api/wrong');
+  $('#clearWrong').classList.toggle('hide', !list.length);
+  $('#wrongList').innerHTML = list.length ? ''
+    : '<p class="muted">아직 틀린 단어가 없습니다.</p>';
+  list.forEach(w => {
+    const el = document.createElement('div');
+    el.className = 'card row';
+    el.innerHTML = `<div class="grow"><b>${w.en}</b>
+      <div class="muted">${w.ko}</div></div><button class="link">외웠어요</button>`;
+    el.querySelector('button').onclick = async () => {
+      await api('/api/wrong/' + encodeURIComponent(w.en), { method: 'DELETE' });
+      showWrong();
+    };
+    $('#wrongList').append(el);
+  });
+}
+$('#clearWrong').onclick = async () => {
+  if (!confirm('오답노트를 전부 비울까요?')) return;
+  await api('/api/wrong/*', { method: 'DELETE' });
+  showWrong();
+};
+
+function logWrong(q) {
+  if (q.logged) return;               // 한 문제당 한 번만 기록
+  q.logged = true;
+  api('/api/wrong', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ en: q.w.en, ko: q.w.ko }),
+  }).catch(() => {});
+}
+
+/* ── 유닛 ── */
+async function openBook(id) {
+  book = await api('/api/books/' + id);
+  unitNames = Object.keys(book.units);
+  showUnits();
+}
+
+function showUnits() {
+  view('units');
+  $('#bookName').textContent = book.name;
+  $('#units').innerHTML = '';
+  unitNames.forEach((u, i) => {
+    const el = document.createElement('div');
+    el.className = 'card clickable';
+    el.innerHTML = `<b>${u}</b> <div class="muted">${book.units[u].length}개 단어</div>`;
+    el.onclick = () => startUnit(i);
+    $('#units').append(el);
+  });
+}
+
+/* ── 퀴즈 ── */
+function startUnit(i) {
+  unitIdx = i;
+  const words = book.units[unitNames[i]];
+  const pool = shuffle(words.slice());
+  // 20문제: 단어가 20개 미만이면 순환해서 채움
+  qs = Array.from({ length: 20 }, (_, k) => ({
+    w: pool[k % pool.length],
+    type: k < 10 ? 'mc' : 'sa',
+  }));
+  qi = 0;
+  view('quiz');
+  render();
+}
+
+const unitWords = () => book.units[unitNames[unitIdx]].map(w => w.en);
+
+async function render() {
+  const q = qs[qi], w = q.w;
+  locked = false;
+  $('#bar').style.width = (qi / 20 * 100) + '%';
+  $('#qinfo').textContent = `${qi + 1} / 20 · ` +
+    (q.type === 'mc' ? '뜻에 맞는 영단어 고르기' : '영단어의 뜻 입력하기');
+  $('#prompt').textContent = q.type === 'mc' ? w.ko : w.en;
+  $('#fb').textContent = ''; $('#fb').className = 'fb';
+  $('#next').disabled = true;
+  $('#next').textContent = qi === 19 ? '결과 보기' : '다음 문제';
+  $('#mc').classList.toggle('hide', q.type !== 'mc');
+  $('#sa').classList.toggle('hide', q.type !== 'sa');
+
+  if (q.type === 'sa') { $('#answer').value = ''; $('#answer').disabled = false; $('#answer').focus(); return; }
+
+  $('#mc').innerHTML = '<div class="muted center">선지를 만드는 중...</div>';
+  let wrong;
+  try {
+    const r = await api('/api/distractors', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ answer: w.en, meaning: w.ko, pool: unitWords() }),
+    });
+    wrong = r.distractors;
+  } catch { wrong = unitWords().filter(x => x !== w.en).slice(0, 3); }
+  if (qs[qi] !== q) return;   // 그 사이 문제가 바뀌었으면 버림
+
+  $('#mc').innerHTML = '';
+  shuffle([w.en, ...wrong]).forEach(opt => {
+    const b = document.createElement('button');
+    b.className = 'opt'; b.textContent = opt;
+    b.onclick = () => pickMc(b, opt === w.en);
+    $('#mc').append(b);
+  });
+}
+
+function pickMc(btn, correct) {
+  if (locked) return;
+  if (correct) {
+    locked = true;
+    btn.className = 'opt right';
+    $('#mc').querySelectorAll('button').forEach(b => b.disabled = true);
+    say(true, '정답입니다!');
+  } else {
+    btn.className = 'opt wrong';
+    btn.disabled = true;
+    logWrong(qs[qi]);
+    say(false, '틀렸습니다. 다시 골라보세요.');
+  }
+}
+
+/* 한글 뜻 채점: 쉼표로 나눈 뜻 중 하나와 맞으면 정답 */
+const norm = s => s.toLowerCase().replace(/[\s.,~()·\-'"\/;:!?]/g, '');
+function checkKo(input, meaning) {
+  const a = norm(input);
+  if (!a) return false;
+  return meaning.split(/[,;\/·]/).map(norm).filter(Boolean)
+    .some(s => s === a || (a.length >= 2 && s.includes(a)));
+}
+
+$('#submit').onclick = () => {
+  if (locked) return;
+  const w = qs[qi].w;
+  if (checkKo($('#answer').value, w.ko)) {
+    locked = true;
+    $('#answer').disabled = true;
+    say(true, `정답! ${w.en} = ${w.ko}`);
+  } else {
+    logWrong(qs[qi]);
+    say(false, '틀렸습니다. 다시 입력해보세요.');
+    $('#answer').select();
+  }
+};
+$('#answer').onkeydown = e => { if (e.key === 'Enter') $('#submit').click(); };
+
+function say(ok, msg) {
+  $('#fb').textContent = msg;
+  $('#fb').className = 'fb ' + (ok ? 'ok' : 'no');
+  $('#next').disabled = !ok;      // 맞히기 전에는 절대 다음으로 못 감
+}
+
+$('#next').onclick = () => {
+  if ($('#next').disabled) return;
+  if (++qi >= 20) return finish();
+  render();
+};
+
+function finish() {
+  view('done');
+  $('#doneTitle').textContent = unitNames[unitIdx] + ' 클리어!';
+  const last = unitIdx >= unitNames.length - 1;
+  $('#nextUnit').disabled = last;
+  $('#nextUnit').textContent = last ? '마지막 유닛입니다' : `다음 유닛 (${unitNames[unitIdx + 1]})`;
+}
+$('#nextUnit').onclick = () => startUnit(unitIdx + 1);
+
+showLibrary();
+</script>
+</body>
+</html>
