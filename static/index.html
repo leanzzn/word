@@ -5,54 +5,108 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>내 단어장</title>
 <style>
-  :root { --bg:#f7f7f8; --card:#fff; --line:#e3e3e8; --txt:#1c1c1e;
-          --sub:#6b6b73; --main:#2f6bff; --ok:#12a150; --no:#e5484d; }
-  * { box-sizing:border-box; }
-  body { margin:0; background:var(--bg); color:var(--txt); font-size:17px;
-         font-family:-apple-system,"Segoe UI","Malgun Gothic",sans-serif; }
-  .wrap { max-width:520px; margin:0 auto; padding:20px 16px 60px; }
-  h1 { font-size:22px; margin:0 0 4px; }
-  .sub { color:var(--sub); font-size:14px; margin:0 0 20px; }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:14px;
-          padding:16px; margin-bottom:10px; }
-  .row { display:flex; align-items:center; gap:10px; }
-  .grow { flex:1; min-width:0; }
-  button { font:inherit; border:0; border-radius:10px; padding:12px 16px;
-           background:var(--main); color:#fff; cursor:pointer; }
-  button:disabled { background:#c9cad0; cursor:not-allowed; }
-  button.ghost { background:#eceef3; color:var(--txt); }
-  button.link { background:none; color:var(--sub); padding:6px; font-size:14px; }
-  input[type=text] { font:inherit; width:100%; padding:14px; border-radius:10px;
-                     border:1px solid var(--line); }
-  .clickable { cursor:pointer; }
-  .clickable:hover { border-color:var(--main); }
-  .muted { color:var(--sub); font-size:14px; }
-  .bar { height:6px; background:#e6e6ea; border-radius:99px; overflow:hidden; margin-bottom:16px; }
-  .bar > i { display:block; height:100%; background:var(--main); transition:width .25s; }
-  .q { font-size:15px; color:var(--sub); margin-bottom:8px; }
-  .prompt { font-size:30px; font-weight:700; text-align:center; margin:24px 0 28px;
-            word-break:break-word; }
-  .opt { display:block; width:100%; text-align:left; background:var(--card);
-         border:1px solid var(--line); color:var(--txt); margin-bottom:8px; padding:15px; }
-  .opt:hover:not(:disabled) { border-color:var(--main); }
-  .opt.right { border-color:var(--ok); background:#eaf7f0; color:var(--ok); font-weight:700; }
-  .opt.wrong { border-color:var(--no); background:#fdeeee; color:var(--no); }
-  .fb { min-height:26px; margin:14px 0; text-align:center; font-weight:600; }
-  .fb.ok { color:var(--ok); } .fb.no { color:var(--no); }
-  .hide { display:none; }
-  .center { text-align:center; }
-  .big { font-size:48px; margin:20px 0 8px; }
+  /* 파스텔 대시보드 느낌: 초록 배경 위에 크림색 패널, 둥근 카드, 알약 버튼 */
+  :root{
+    --page:#C1E8D5; --panel:#F8F5F2; --card:#fff; --line:#EAE4DE;
+    --txt:#171719; --sub:#6E6A66; --main:#111113; --ok:#12a150; --no:#e5484d;
+    --pink:#FFD9DB; --yellow:#FDE2B5; --purple:#D3D5FE; --green:#B9EEDB;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--page);color:var(--txt);font-size:17px;
+       font-family:-apple-system,"Segoe UI","Malgun Gothic",sans-serif;
+       -webkit-font-smoothing:antialiased}
+  .shell{max-width:760px;margin:0 auto;padding:18px 14px 40px}
+
+  /* 상단 내비게이션 */
+  .nav{display:flex;align-items:center;gap:8px;margin-bottom:14px;
+       overflow-x:auto;white-space:nowrap;padding-bottom:2px}
+  .logo{width:40px;height:40px;border-radius:13px;background:var(--main);flex:none;
+        display:flex;align-items:center;justify-content:center;font-size:18px}
+  .tab{background:#fff;color:var(--sub);padding:10px 18px;border-radius:999px;
+       font-size:15px;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+  .tab.on{background:var(--main);color:#fff}
+
+  .panel{background:var(--panel);border-radius:28px;padding:26px 20px 30px;
+         box-shadow:0 18px 40px rgba(23,23,25,.10)}
+  h1{font-size:30px;font-weight:600;letter-spacing:-.02em;line-height:1.15;margin:0 0 6px}
+  .sub{color:var(--sub);font-size:14px;margin:0 0 22px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:22px;
+        padding:18px;margin-bottom:10px}
+  .row{display:flex;align-items:center;gap:10px}
+  .grow{flex:1;min-width:0}
+
+  button{font:inherit;font-weight:600;border:0;border-radius:999px;padding:13px 22px;
+         background:var(--main);color:#fff;cursor:pointer;
+         transition:transform .12s,box-shadow .12s,background .12s}
+  button:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 6px 16px rgba(23,23,25,.18)}
+  button:disabled{background:#D8D3CE;cursor:not-allowed}
+  button.ghost{background:#fff;color:var(--txt);box-shadow:0 1px 2px rgba(0,0,0,.05)}
+  button.ghost:disabled{background:#EDE8E3;color:#B3ADA7;box-shadow:none}
+  button.link{background:none;color:var(--sub);padding:6px 2px;font-size:14px;font-weight:500}
+  button.link:hover:not(:disabled){transform:none;box-shadow:none;color:var(--txt)}
+
+  input[type=text]{font:inherit;width:100%;padding:15px 18px;border-radius:16px;
+                   border:1px solid var(--line);background:#fff;outline:0}
+  input[type=text]:focus{border-color:var(--main)}
+  input[type=file]{font-size:14px;color:var(--sub);min-width:0}
+  input[type=file]::file-selector-button{font:inherit;font-size:14px;font-weight:600;border:0;
+    cursor:pointer;background:#EFEAE5;color:var(--txt);padding:9px 14px;border-radius:999px;
+    margin-right:10px}
+
+  .clickable{cursor:pointer;transition:transform .12s,box-shadow .12s}
+  .clickable:hover{transform:translateY(-2px);box-shadow:0 10px 22px rgba(23,23,25,.10)}
+  .muted{color:var(--sub);font-size:14px}
+
+  /* 단어장·유닛 목록: 넓은 화면은 두 칸, 카드 색은 파스텔 4색을 돌려가며 */
+  #books,#units{display:grid;gap:12px}
+  @media(min-width:620px){#books,#units{grid-template-columns:1fr 1fr}}
+  #books .card,#units .card{margin:0;border-color:transparent;min-height:116px}
+  #books .card{align-items:flex-end}
+  #units .card{display:flex;flex-direction:column;justify-content:flex-end}
+  #books .card:nth-child(4n+1),#units .card:nth-child(4n+1){background:var(--pink)}
+  #books .card:nth-child(4n+2),#units .card:nth-child(4n+2){background:var(--yellow)}
+  #books .card:nth-child(4n+3),#units .card:nth-child(4n+3){background:var(--purple)}
+  #books .card:nth-child(4n),  #units .card:nth-child(4n)  {background:var(--green)}
+  #books b,#units b{display:block;font-size:19px;line-height:1.25;margin-bottom:6px}
+  #books .muted,#units .muted,#books button.link,#units button.link{color:#57534E}
+
+  /* 퀴즈 */
+  .bar{height:8px;background:#E7E1DB;border-radius:99px;overflow:hidden;margin-bottom:18px}
+  .bar>i{display:block;height:100%;background:var(--main);border-radius:99px;transition:width .25s}
+  .q{font-size:14px;color:var(--sub);font-weight:600;margin-bottom:10px}
+  .prompt{background:var(--purple);border-radius:24px;padding:34px 20px;margin:0 0 20px;
+          font-size:30px;font-weight:700;text-align:center;word-break:break-word}
+  .opt{display:block;width:100%;text-align:left;background:#fff;color:var(--txt);
+       border:1px solid var(--line);border-radius:18px;padding:15px 20px;margin-bottom:9px;
+       font-weight:500}
+  .opt:hover:not(:disabled){transform:none;border-color:var(--main);
+                            box-shadow:0 4px 12px rgba(23,23,25,.08)}
+  .opt:disabled{background:#fff;color:#B3ADA7}
+  .opt.right,.opt.right:disabled{border-color:var(--ok);background:#E7F6EE;color:var(--ok);font-weight:700}
+  .opt.wrong,.opt.wrong:disabled{border-color:var(--no);background:#FDEEEE;color:var(--no)}
+  .fb{min-height:26px;margin:16px 0;text-align:center;font-weight:700}
+  .fb.ok{color:var(--ok)} .fb.no{color:var(--no)}
+
+  .hide{display:none}
+  .center{text-align:center}
+  .big{font-size:56px;margin:10px 0 8px}
 </style>
 </head>
 <body>
-<div class="wrap">
+<div class="shell">
+
+<nav class="nav">
+  <span class="logo">📚</span>
+  <button class="tab" id="tab-lib" onclick="showLibrary()">🏠 보관함</button>
+  <button class="tab" id="tab-wrong" onclick="showWrong()">📕 오답노트 <span id="wrongCount"></span></button>
+</nav>
+
+<div class="panel">
 
 <!-- ── 보관함 ───────────────────────────────────────────── -->
 <section id="v-library">
   <h1>내 단어장</h1>
   <p class="sub">PDF를 올리면 한 번만 분석해서 저장해둡니다.</p>
-  <button class="ghost" style="width:100%; margin-bottom:10px" onclick="showWrong()">
-    📕 오답노트 <span id="wrongCount"></span></button>
   <div class="card">
     <div class="row">
       <input type="file" id="pdf" accept="application/pdf" class="grow">
@@ -60,7 +114,7 @@
     </div>
     <p class="muted" id="upmsg" style="margin:10px 0 0"></p>
   </div>
-  <div id="books"></div>
+  <div id="books" style="margin-top:12px"></div>
   <p class="center" style="margin-top:24px">
     <button class="link" id="resetKey">AI 키 다시 입력하기</button>
   </p>
@@ -68,7 +122,6 @@
 
 <!-- ── 오답노트 ─────────────────────────────────────────── -->
 <section id="v-wrong" class="hide">
-  <button class="link" onclick="showLibrary()">← 보관함</button>
   <h1>오답노트</h1>
   <p class="sub">퀴즈에서 틀린 단어만 모아둡니다. 외운 건 지우세요.</p>
   <div id="wrongList"></div>
@@ -77,7 +130,6 @@
 
 <!-- ── 유닛 선택 ────────────────────────────────────────── -->
 <section id="v-units" class="hide">
-  <button class="link" onclick="showLibrary()">← 보관함</button>
   <h1 id="bookName"></h1>
   <p class="sub">유닛을 고르면 20문제가 시작됩니다.</p>
   <div id="units"></div>
@@ -86,7 +138,7 @@
 <!-- ── 퀴즈 ─────────────────────────────────────────────── -->
 <section id="v-quiz" class="hide">
   <button class="link" onclick="showUnits()">← 유닛 선택</button>
-  <div class="bar"><i id="bar" style="width:0%"></i></div>
+  <div class="bar" style="margin-top:10px"><i id="bar" style="width:0%"></i></div>
   <div class="q" id="qinfo"></div>
   <div class="prompt" id="prompt"></div>
 
@@ -111,6 +163,7 @@
   <button class="ghost" style="width:100%" onclick="showUnits()">유닛 목록</button>
 </section>
 
+</div>
 </div>
 <script>
 const $ = s => document.querySelector(s);
@@ -208,6 +261,8 @@ const WRONG_MSG = '틀렸어 븅딱아ㅋㅋ.  다시 풀어';
 function view(id) {
   ['library', 'wrong', 'units', 'quiz', 'done'].forEach(v =>
     $('#v-' + v).classList.toggle('hide', v !== id));
+  $('#tab-wrong').classList.toggle('on', id === 'wrong');
+  $('#tab-lib').classList.toggle('on', id !== 'wrong');
   window.scrollTo(0, 0);
 }
 
@@ -294,6 +349,7 @@ $('#up').onclick = async () => {
 async function showWrong() {
   view('wrong');
   const list = await api('/api/wrong');
+  $('#wrongCount').textContent = list.length ? `(${list.length})` : '';
   $('#clearWrong').classList.toggle('hide', !list.length);
   $('#wrongList').innerHTML = list.length ? ''
     : '<p class="muted">아직 틀린 단어가 없습니다.</p>';
