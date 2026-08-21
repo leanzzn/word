@@ -5,9 +5,11 @@
   "scripts": {
     "deploy": "wrangler deploy",
     "dev": "wrangler dev",
-    "test": "node worker.test.mjs"
+    "test": "node worker.test.mjs",
+    "check": "node ui.check.mjs"
   },
   "devDependencies": {
+    "puppeteer-core": "^25.8.0",
     "wrangler": "^4.123.0"
   }
 }

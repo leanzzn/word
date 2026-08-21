@@ -132,6 +132,12 @@ export function buildQuestions(words, shuffle = a => a) {
   }));
 }
 
+/** 포기한 문제는 뒤에 다시 넣어둔 것까지 빼낸다. (총 문제 수가 늘어나지 않게) */
+export function dropRetry(qs, qi) {
+  const q = qs[qi];
+  return qs.filter((x, k) => k <= qi || !(x.retry && x.w === q.w && x.type === q.type));
+}
+
 /** 틀린 문제를 같은 유형의 맨 뒤로 다시 넣는다.
  *  객관식은 마지막 객관식 뒤(= 주관식 시작 전), 주관식은 전체 맨 뒤.
  *  그래서 객관식을 다 맞히기 전에는 주관식으로 넘어가지 않는다. */

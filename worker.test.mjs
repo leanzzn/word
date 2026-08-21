@@ -1,6 +1,6 @@
 /* 자체검사:  node worker.test.mjs  */
 import assert from "node:assert/strict";
-import { chunk, group, fallback, checkKo, buildQuestions, requeue, parseLocal, cut, cleanKo } from "./static/lib.mjs";
+import { chunk, group, fallback, checkKo, buildQuestions, requeue, dropRetry, parseLocal, cut, cleanKo } from "./static/lib.mjs";
 import { clean } from "./worker.js";
 
 // ── 부록 잘라내기 ──
@@ -132,6 +132,23 @@ assert.equal(requeue([{ type: "sa", w: 1, logged: true }], 0)[1].logged, true);
 let big = q;
 for (let i = 0; i < 100; i++) big = requeue(big, 0);
 assert.equal(big.length, 50);
+
+// ── 포기하면 다시 낼 문제도 빼낸다 (총 문제 수가 늘어나면 안 된다) ──
+const w1 = { en: "a", ko: "가" }, w2 = { en: "b", ko: "나" };
+const base = [{ type: "mc", w: w1 }, { type: "mc", w: w2 }, { type: "sa", w: w1 }];
+// 0번을 틀려서 다시 넣었다가 포기하면 원래 길이로 돌아온다
+assert.deepEqual(dropRetry(requeue(base, 0), 0), base);
+// 아직 안 푼 다른 문제는 그대로 둔다
+const two = requeue(requeue(base, 0), 1);           // 0번, 1번 둘 다 다시 넣음
+assert.equal(two.length, 5);
+assert.equal(dropRetry(two, 0).length, 4);          // 0번 것만 빠짐
+assert.equal(dropRetry(two, 0).filter(x => x.w === w2).length, 2);
+// 같은 단어라도 유형이 다르면 안 건드린다 (객관식 포기가 주관식을 지우면 안 됨)
+assert.equal(dropRetry(requeue(base, 2), 0).length, 4);
+// 틀린 적 없이 포기하면 아무것도 안 빠진다
+assert.deepEqual(dropRetry(base, 1), base);
+// 이미 지나간 문제는 건드리지 않는다
+assert.equal(dropRetry([{ type: "mc", w: w1, retry: true }, { type: "mc", w: w1 }], 1).length, 2);
 
 // ── 서버 검증 (브라우저가 보낸 값을 그대로 믿지 않는다) ──
 assert.deepEqual(clean({ "U 1": [{ en: " go ", ko: " 가다 " }, { en: "", ko: "x" }, null] }),

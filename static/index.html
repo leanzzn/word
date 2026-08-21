@@ -519,7 +519,8 @@ $('#next').onclick = () => {
 /* 포기하기: 정답은 안 알려주고, 그 단어만 오답노트에 담고 다음 문제로 넘어간다. */
 $('#giveup').onclick = () => {
   if (locked) return;
-  logWrong(qs[qi]);                       // 포기한 건 오답노트에만. 다시 내지는 않는다
+  logWrong(qs[qi]);                       // 포기한 건 오답노트에만
+  qs = L.dropRetry(qs, qi);               // 틀려서 뒤에 넣어둔 것도 빼낸다 (문제 수 유지)
   gaveUp++;
   if (++qi >= qs.length) return finish();
   render();
