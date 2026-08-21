@@ -106,7 +106,7 @@
 <!-- ── 보관함 ───────────────────────────────────────────── -->
 <section id="v-library">
   <h1>내 단어장</h1>
-  <p class="sub">PDF를 올리면 한 번만 분석해서 저장해둡니다.</p>
+  <p class="sub">PDF를 올리면 글자를 그대로 읽어서 저장해둡니다. (AI 안 씀)</p>
   <div class="card">
     <div class="row">
       <input type="file" id="pdf" accept="application/pdf" class="grow">
@@ -246,12 +246,6 @@ async function pdfText(file) {
   return out;
 }
 
-const toBase64 = async file => {
-  const b = new Uint8Array(await file.arrayBuffer());
-  let s = '';
-  for (let i = 0; i < b.length; i += 8192) s += String.fromCharCode(...b.subarray(i, i + 8192));
-  return btoa(s);
-};
 
 /* ── 화면 전환 ────────────────────────────────────────── */
 let book = null, unitNames = [], unitIdx = 0, qs = [], qi = 0, locked = false, gaveUp = 0;
@@ -302,36 +296,21 @@ $('#resetKey').onclick = () => {
   try { aiKey(); alert('AI 키를 저장했습니다.'); } catch (e) { alert(e); }
 };
 
-/* ── 단어장 올리기: 브라우저가 글자를 뽑고 AI로 정리한 뒤 서버에 저장 ── */
+/* ── 단어장 올리기: 브라우저가 PDF 글자를 뽑아 그대로 정리한 뒤 서버에 저장 (AI 안 씀) ── */
 $('#up').onclick = async () => {
   const f = $('#pdf').files[0];
   if (!f) return alert('PDF 파일을 선택해주세요.');
   const msg = t => $('#upmsg').textContent = t;
   $('#up').disabled = true;
   try {
-    const { PARSE_PROMPT, ENTRY_SCHEMA, chunk, group } = await lib();
+    const { cut, parseLocal, group } = await lib();
     msg('PDF에서 글자를 읽는 중...');
     const text = await pdfText(f);
-
-    let entries;
-    if (text.trim().length < 30) {
-      // 글자가 없는 스캔본 → PDF 원본을 그대로 AI에게 보여준다 (느리지만 읽어낸다)
-      msg('글자가 없는 스캔본입니다. 사진으로 읽는 중... 몇 분 걸릴 수 있습니다.');
-      entries = await ai([
-        { inline_data: { mime_type: 'application/pdf', data: await toBase64(f) } },
-        { text: PARSE_PROMPT },
-      ], ENTRY_SCHEMA, { maxOutputTokens: 60000 }, 600000);
-    } else {
-      // 두꺼운 단어장은 한 번에 보내면 답변이 잘린다. 나눠서 동시에 보낸다.
-      const parts = chunk(text);
-      msg(`분석 중입니다... (${parts.length}덩어리, 20초~1분)`);
-      entries = (await Promise.all(parts.map(c =>
-        ai([{ text: `${PARSE_PROMPT}\n\n--- 단어장 내용 ---\n${c}` }],
-          ENTRY_SCHEMA, { maxOutputTokens: 60000 }, 300000)))).flat();
-    }
+    if (text.trim().length < 30) throw '글자가 없는 스캔본 PDF입니다. 글자가 들어있는 PDF로 올려주세요';
+    const entries = parseLocal(cut(text));
 
     const units = group(entries);
-    if (!Object.keys(units).length) throw '단어를 찾지 못했습니다. 다른 PDF로 시도해주세요';
+    if (!Object.keys(units).length) throw '단어를 찾지 못했습니다. 한 줄에 영단어와 한글 뜻이 나란히 있는 PDF여야 합니다';
     msg('저장하는 중...');
     const b = await postJSON('/api/books', { name: f.name, units });
     const n = Object.values(b.units).reduce((s, w) => s + w.length, 0);

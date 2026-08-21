@@ -1,38 +1,5 @@
 /* 순수 계산 함수 모음. 브라우저(index.html)와 자체검사(lib.test.mjs)가 같이 쓴다. */
 
-export const PARSE_PROMPT = `아래는 영어 단어장 내용입니다. 모든 단어를 빠짐없이 추출하세요.
-
-규칙:
-- unit: 그 단어가 속한 유닛/챕터/DAY 이름 (예: "Unit 1", "DAY 03"). 표기가 없으면 "Unit 1".
-- en: 영단어 하나 (품사표시·번호·발음기호 제외).
-  단, "capitalize (on)", "give up", "look forward to" 처럼 띄어쓰기로 이어진 숙어·구동사는
-  쪼개지 말고 한 항목으로. 괄호가 있으면 괄호까지 그대로 살릴 것.
-- ko: 한글 뜻. 여러 개면 쉼표로 구분.
-  한자 뜻풀이와 괄호는 지우고 한글만 남길 것 (예: "정상(頂上)" -> "정상").
-- 예문, 목차, 페이지 번호는 제외하고 표제어만 추출.
-- "Appendix 101"처럼 Appendix 뒤에 숫자가 붙은 제목이 나오면, 거기서부터 뒤쪽은 전부 무시.`;
-
-export const ENTRY_SCHEMA = {
-  type: "ARRAY",
-  items: {
-    type: "OBJECT",
-    properties: { unit: { type: "STRING" }, en: { type: "STRING" }, ko: { type: "STRING" } },
-    required: ["unit", "en", "ko"],
-  },
-};
-
-/** 긴 글을 줄 단위로 끊어 size 이하 덩어리로 나눈다 (단어 한 줄이 잘리지 않게). */
-export function chunk(text, size = 15000) {
-  const out = [];
-  let cur = "";
-  for (const line of text.split("\n")) {
-    if (cur.length + line.length + 1 > size && cur) { out.push(cur); cur = ""; }
-    cur += line + "\n";
-  }
-  if (cur.trim()) out.push(cur);
-  return out.length ? out : [text];
-}
-
 /* ── AI 없이 글자만 보고 단어 뽑기 ──
    대부분의 단어장은 한 줄에 "영단어 + 한글뜻"이 나란히 있다. 그런 줄만 골라낸다.
    2단 편집(한 줄에 단어 두 개)도 한 줄에서 여러 쌍을 찾아 처리한다. */
@@ -76,6 +43,9 @@ export function parseLocal(text) {
     }
     for (const [, en, ko] of line.matchAll(PAIR_RE)) {
       const e = en.trim();
+      // "He abandoned the car. 그는 차를 버렸다." 같은 예문은 표제어가 아니다.
+      // ponytail: 대문자로 시작하는 여러 단어면 문장으로 본다. 소문자로 시작하는 예문은 못 거른다.
+      if (/^[A-Z]/.test(e) && /\s/.test(e)) continue;
       // 뒤에 붙은 다음 단어의 번호("적응하다   4")까지 같이 잡히므로 꼬리를 떼어낸다
       const m = cleanKo(ko.replace(POS_RE, "").replace(/[\s\d,.·)\]]+$/, ""));
       if (e.length >= 2 && m) out.push({ unit, en: e, ko: m });

@@ -1,6 +1,6 @@
 /* 자체검사:  node worker.test.mjs  */
 import assert from "node:assert/strict";
-import { chunk, group, fallback, checkKo, buildQuestions, requeue, dropRetry, parseLocal, cut, cleanKo } from "./static/lib.mjs";
+import { group, fallback, checkKo, buildQuestions, requeue, dropRetry, parseLocal, cut, cleanKo } from "./static/lib.mjs";
 import { clean } from "./worker.js";
 
 // ── 부록 잘라내기 ──
@@ -33,6 +33,9 @@ assert.deepEqual(p, [
   { unit: "Unit 2", en: "summit", ko: "정상" },
 ]);
 assert.deepEqual(parseLocal("아무 단어도 없는 글\n그냥 문장입니다"), []);
+// 예문(영어 문장 + 한글 해석)과 페이지 번호·목차는 표제어가 아니다
+assert.deepEqual(parseLocal("He abandoned the car. 그는 차를 버렸다."), []);
+assert.deepEqual(parseLocal("- 12 -\np. 34\n영어 단어장 목차"), []);
 assert.equal(parseLocal("1과\nseed 씨앗")[0].unit, "1과");
 // 뜻이 품사 표시로 시작해도 뜻 자체는 안 잘린다
 assert.equal(parseLocal("stand 명 대신하다")[0].ko, "대신하다");
@@ -75,12 +78,6 @@ assert.equal(f.length, 3);
 assert.ok(!f.includes("adapt"));
 assert.deepEqual(new Set(f.slice(0, 2)), new Set(["adopt", "adept"]));
 assert.equal(fallback("go", []).length, 3);              // 풀이 비어도 3개
-
-// ── 긴 글 나누기 ──
-const lines = Array.from({ length: 1000 }, (_, i) => `line${i}`).join("\n");
-const c = chunk(lines, 100);
-assert.ok(c.length > 1 && c.every(x => x.length <= 108));
-assert.equal(c.join("").split("line").length - 1, 1000);  // 한 줄도 잃지 않는다
 
 // ── 주관식 채점 ──
 assert.ok(checkKo("적응하다", "적응하다, 맞추다"));        // 뜻 하나만
