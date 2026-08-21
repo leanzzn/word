@@ -99,13 +99,14 @@
 
   <div class="fb" id="fb"></div>
   <button id="next" style="width:100%" disabled>다음 문제</button>
+  <button class="ghost" id="giveup" style="width:100%; margin-top:8px">포기하기 (오답노트에 담기)</button>
 </section>
 
 <!-- ── 완료 ─────────────────────────────────────────────── -->
 <section id="v-done" class="hide center">
   <div class="big">🎉</div>
   <h1 id="doneTitle"></h1>
-  <p class="sub">20문제 모두 맞혔습니다.</p>
+  <p class="sub" id="doneSub"></p>
   <button id="nextUnit" style="width:100%; margin-bottom:8px">다음 유닛으로 넘어가기</button>
   <button class="ghost" style="width:100%" onclick="showUnits()">유닛 목록</button>
 </section>
@@ -200,7 +201,7 @@ const toBase64 = async file => {
 };
 
 /* ── 화면 전환 ────────────────────────────────────────── */
-let book = null, unitNames = [], unitIdx = 0, qs = [], qi = 0, locked = false;
+let book = null, unitNames = [], unitIdx = 0, qs = [], qi = 0, locked = false, gaveUp = 0;
 
 const WRONG_MSG = '틀렸어 븅딱아ㅋㅋ.  다시 풀어';
 
@@ -349,6 +350,7 @@ async function startUnit(i) {
   unitIdx = i;
   qs = buildQuestions(book.units[unitNames[i]], shuffle);
   qi = 0;
+  gaveUp = 0;
   view('quiz');
   render();
 }
@@ -365,6 +367,7 @@ async function render() {
   $('#prompt').textContent = q.type === 'mc' ? w.ko : w.en;
   $('#fb').textContent = ''; $('#fb').className = 'fb';
   $('#next').disabled = true;
+  $('#giveup').disabled = false;
   $('#next').textContent = qi === 19 ? '결과 보기' : '다음 문제';
   $('#mc').classList.toggle('hide', q.type !== 'mc');
   $('#sa').classList.toggle('hide', q.type !== 'sa');
@@ -437,6 +440,7 @@ function say(ok, msg) {
   $('#fb').textContent = msg;
   $('#fb').className = 'fb ' + (ok ? 'ok' : 'no');
   $('#next').disabled = !ok;              // 맞히기 전에는 절대 다음으로 못 감
+  $('#giveup').disabled = ok;             // 맞혔으면 포기할 일이 없다
 }
 
 $('#next').onclick = () => {
@@ -445,9 +449,21 @@ $('#next').onclick = () => {
   render();
 };
 
+/* 포기하기: 정답은 안 알려주고, 그 단어만 오답노트에 담고 다음 문제로 넘어간다. */
+$('#giveup').onclick = () => {
+  if (locked) return;
+  logWrong(qs[qi]);
+  gaveUp++;
+  if (++qi >= 20) return finish();
+  render();
+};
+
 function finish() {
   view('done');
   $('#doneTitle').textContent = unitNames[unitIdx] + ' 클리어!';
+  $('#doneSub').textContent = gaveUp
+    ? `20문제 중 ${gaveUp}개는 오답노트에 담았습니다.`
+    : '20문제 모두 맞혔습니다.';
   const last = unitIdx >= unitNames.length - 1;
   $('#nextUnit').disabled = last;
   $('#nextUnit').textContent = last ? '마지막 유닛입니다' : `다음 유닛 (${unitNames[unitIdx + 1]})`;
