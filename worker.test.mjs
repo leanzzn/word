@@ -124,6 +124,8 @@ assert.equal(types(r2), "mc".repeat(10) + "sa".repeat(11));
 assert.equal(r2[20].w, q[15].w);
 // 객관식만 있는 경우에도 맨 뒤로
 assert.equal(requeue([{ type: "mc", w: 1 }], 0).length, 2);
+// 다시 낸 문제는 "이미 다시 냈음" 표시를 물려받지 않는다 (또 틀리면 또 나와야 하니까)
+assert.equal(requeue([{ type: "sa", w: 1, requeued: true }], 0)[1].requeued, undefined);
 // 이미 기록한 오답은 다시 기록하지 않게 표시를 물려받는다
 assert.equal(requeue([{ type: "sa", w: 1, logged: true }], 0)[1].logged, true);
 // 50문제가 넘으면 더 안 늘린다

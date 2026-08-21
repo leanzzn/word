@@ -137,7 +137,7 @@ export function buildQuestions(words, shuffle = a => a) {
  *  그래서 객관식을 다 맞히기 전에는 주관식으로 넘어가지 않는다. */
 export function requeue(qs, qi, max = 50) {
   if (qs.length >= max) return qs;          // 끝없이 늘어나지 않게 50문제까지만
-  const q = qs[qi];
+  const { requeued, ...q } = qs[qi];        // 다시 낸 문제도 또 틀리면 또 다시 낸다
   let at = qs.length;
   if (q.type === "mc") {
     const i = qs.findIndex((x, k) => k > qi && x.type !== "mc");
