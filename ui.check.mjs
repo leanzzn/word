@@ -39,8 +39,9 @@ await page.evaluateOnNewDocument(words => {
     const u = String(url), m = (opt.method || "GET").toUpperCase();
     if (u.includes("generativelanguage")) {
       window.__ai.push(JSON.parse(opt.body).contents[0].parts[0].text.match(/"([a-z]+)"/)[1]);
+      const n = window.__ai.length;       // 부를 때마다 다른 선지를 준다
       await slow(700);                    // AI는 느리다고 치고
-      return json({ candidates: [{ content: { parts: [{ text: JSON.stringify(["zzza", "zzzb", "zzzc"]) }] } }] });
+      return json({ candidates: [{ content: { parts: [{ text: JSON.stringify([`zz${n}a`, `zz${n}b`, `zz${n}c`]) }] } }] });
     }
     if (u.endsWith("/api/books")) return json([{ id: "b1", name: "테스트", units: 1, words: words.length }]);
     if (u.includes("/api/books/")) return json({ id: "b1", name: "테스트", units: { "Unit 1": words } });
@@ -101,6 +102,7 @@ assert.equal(await total(), 20, "시작 문제 수");
 assert.equal(await nextOff(), true, "풀기 전에는 다음 버튼 잠김");
 
 // 2) 틀리면 다음 버튼이 켜지고, 그 문제는 뒤에 다시 들어간다
+const firstWord = EN[await txt("#prompt")], firstOpts = await opts();
 await answer(false);
 assert.equal(await nextOff(), false, "틀렸을 때 다음 버튼");
 await page.click("#next");
@@ -131,7 +133,13 @@ assert.match(await txt("#fb"), /^정답!/, "정답 문구");
 let retries = 0, guard = 0, types = [];
 while (await page.$eval("#v-quiz", e => !e.classList.contains("hide"))) {
   if (++guard > 60) throw new Error("문제가 끝나지 않음");
-  if ((await info()).includes("다시 도전")) retries++;
+  if ((await info()).includes("다시 도전")) {
+    retries++;
+    assert.equal(EN[await txt("#prompt")], firstWord, "다시 나온 문제는 아까 틀린 그 단어");
+    assert.notDeepEqual(await opts(), firstOpts, "다시 낸 문제는 선지가 새로 만들어져야 한다");
+    const t = await waitOpts();
+    assert.ok(t < 300, `다시 낸 문제 선지도 미리 준비돼 있어야 한다 (${t}ms)`);
+  }
   types.push(await isMc() ? "mc" : "sa");
   await answer(true);
   await page.click("#next");
@@ -143,9 +151,10 @@ assert.equal(await page.$eval("#v-done", e => !e.classList.contains("hide")), tr
 assert.match(await txt("#doneSub"), /2개는 오답노트에 담았습니다/, "완료 문구");
 
 // 7) 틀린 것·포기한 것이 오답노트에 담겼다
-// 8) 같은 단어 선지를 AI에게 두 번 묻지 않는다 (다시 나온 문제도 바로 뜬다)
+// 8) 객관식 문제 하나당 딱 한 번씩만 AI를 부른다 (다시 낸 문제 포함)
 const ai = await page.evaluate(() => window.__ai);
-assert.equal(new Set(ai).size, ai.length, `단어마다 한 번만 물어야 한다: ${ai.join(",")}`);
+const mcCount = await page.evaluate(() => qs.filter(x => x.type === "mc").length);
+assert.equal(ai.length, mcCount, `객관식 ${mcCount}문제 / AI 호출 ${ai.length}회: ${ai.join(",")}`);
 
 const wrong = await page.evaluate(() => window.__wrong.map(w => w.en));
 assert.equal(wrong.length, 3, "오답노트에 담긴 개수(틀림2 + 포기1)");

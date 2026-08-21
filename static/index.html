@@ -424,18 +424,20 @@ async function startUnit(i) {
 const unitWords = () => book.units[unitNames[unitIdx]].map(w => w.en);
 
 /* 객관식 오답 선지.
-   같은 단어는 한 번만 만들어 두고(다시 나온 문제는 바로 뜬다),
-   다음 객관식 것은 지금 문제를 푸는 동안 미리 만들어 둔다. */
-const optCache = new Map();
-function distractors(w) {
-  if (!optCache.has(w.en)) optCache.set(w.en, (async () => {
+   문제 하나당 한 벌씩 만들어 붙여둔다. 다시 낸 문제는 새 문제로 치니까 선지도 새로 만든다.
+   만드는 시점은 앞 문제를 푸는 동안(preload)이라 기다릴 일이 없다. */
+const optCache = new WeakMap();
+function distractors(q) {
+  const w = q.w;
+  if (!optCache.has(q)) optCache.set(q, (async () => {
     const { fallback } = await lib();
     try {
       const got = (await ai([{
         text: `영단어 "${w.en}" (뜻: ${w.ko}) 의 객관식 오답 선지 3개를 만들어줘.\n` +
           `- 실제 존재하는 영단어일 것\n` +
           `- 철자·발음·형태가 비슷해서 헷갈릴 것 (예: adapt/adopt/adept)\n` +
-          `- "${w.en}" 와 뜻이 같거나 비슷하면 안 됨\n영단어 3개만 JSON 배열로.`,
+          `- "${w.en}" 와 뜻이 같거나 비슷하면 안 됨\n` +
+          `- 매번 다른 조합으로 다채롭게\n영단어 3개만 JSON 배열로.`,
       }], { type: 'ARRAY', items: { type: 'STRING' } }, { temperature: 1.4 }, 8000))
         .map(x => String(x).trim())
         .filter(x => x && x.toLowerCase() !== w.en.toLowerCase());
@@ -445,12 +447,12 @@ function distractors(w) {
       return fallback(w.en, unitWords());     // AI가 느리거나 실패하면 비슷한 단어로 대신
     }
   })());
-  return optCache.get(w.en);
+  return optCache.get(q);
 }
 
 /** 앞으로 나올 객관식 n개의 선지를 미리 만들어 둔다. */
 function preload(n = 2) {
-  qs.slice(qi + 1).filter(x => x.type === 'mc').slice(0, n).forEach(x => distractors(x.w));
+  qs.slice(qi + 1).filter(x => x.type === 'mc').slice(0, n).forEach(distractors);
 }
 
 async function render() {
@@ -476,8 +478,8 @@ async function render() {
   }
 
   // 이전 문제의 선지가 남아 보이지 않게 먼저 비운다
-  $('#mc').innerHTML = optCache.has(w.en) ? '' : '<div class="muted center">선지를 만드는 중...</div>';
-  const wrong = await distractors(w);
+  $('#mc').innerHTML = optCache.has(q) ? '' : '<div class="muted center">선지를 만드는 중...</div>';
+  const wrong = await distractors(q);
   if (qs[qi] !== q) return;               // 그 사이 문제가 바뀌었으면 버림
 
   $('#mc').innerHTML = '';
