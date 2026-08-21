@@ -32,11 +32,16 @@ page.on("pageerror", e => { console.error("페이지 오류:", e.message); proce
 await page.evaluateOnNewDocument(words => {
   localStorage.appkey = "k"; localStorage.gkey = "k";
   window.__wrong = [];
+  window.__ai = [];                       // AI를 부른 단어들 (몇 번 부르는지 확인용)
+  const slow = ms => new Promise(r => setTimeout(r, ms));
   const json = o => new Response(JSON.stringify(o), { status: 200, headers: { "Content-Type": "application/json" } });
   window.fetch = async (url, opt = {}) => {
     const u = String(url), m = (opt.method || "GET").toUpperCase();
-    if (u.includes("generativelanguage"))
+    if (u.includes("generativelanguage")) {
+      window.__ai.push(JSON.parse(opt.body).contents[0].parts[0].text.match(/"([a-z]+)"/)[1]);
+      await slow(700);                    // AI는 느리다고 치고
       return json({ candidates: [{ content: { parts: [{ text: JSON.stringify(["zzza", "zzzb", "zzzc"]) }] } }] });
+    }
     if (u.endsWith("/api/books")) return json([{ id: "b1", name: "테스트", units: 1, words: words.length }]);
     if (u.includes("/api/books/")) return json({ id: "b1", name: "테스트", units: { "Unit 1": words } });
     if (u.includes("/api/wrong")) {
@@ -58,6 +63,12 @@ const ready = () => page.waitForFunction(
          document.querySelectorAll("#mc button").length === 4) ||
         !document.querySelector("#sa").classList.contains("hide"), { timeout: 15000 });
 const isMc = () => page.$eval("#mc", e => !e.classList.contains("hide"));
+async function waitOpts() {               // 선지 4개가 뜰 때까지 걸린 시간(ms)
+  const t = Date.now();
+  await page.waitForFunction(() => document.querySelectorAll("#mc button").length === 4,
+    { polling: 10, timeout: 15000 });
+  return Date.now() - t;
+}
 
 async function answer(correct) {
   if (await isMc()) {
@@ -79,7 +90,11 @@ await page.waitForSelector("#books .card");
 await page.click("#books .card .grow");
 await page.waitForSelector("#units .card");
 await page.click("#units .card");
+const first = await waitOpts();           // 첫 문제는 AI를 기다린다
 await ready();
+
+// 0) 다음 문제 선지는 미리 만들어 둬서 기다림이 없다
+assert.ok(first > 400, `첫 문제는 AI를 기다린다 (${first}ms)`);
 
 // 1) 시작은 20문제
 assert.equal(await total(), 20, "시작 문제 수");
@@ -88,7 +103,10 @@ assert.equal(await nextOff(), true, "풀기 전에는 다음 버튼 잠김");
 // 2) 틀리면 다음 버튼이 켜지고, 그 문제는 뒤에 다시 들어간다
 await answer(false);
 assert.equal(await nextOff(), false, "틀렸을 때 다음 버튼");
-await page.click("#next"); await ready();
+await page.click("#next");
+const second = await waitOpts();
+assert.ok(second < 300, `두 번째 문제 선지는 미리 준비돼 있어야 한다 (${second}ms)`);
+await ready();
 assert.equal(await total(), 21, "틀린 뒤 총 문제 수");
 assert.equal(await at(), 2, "두 번째 문제");
 
@@ -125,10 +143,14 @@ assert.equal(await page.$eval("#v-done", e => !e.classList.contains("hide")), tr
 assert.match(await txt("#doneSub"), /2개는 오답노트에 담았습니다/, "완료 문구");
 
 // 7) 틀린 것·포기한 것이 오답노트에 담겼다
+// 8) 같은 단어 선지를 AI에게 두 번 묻지 않는다 (다시 나온 문제도 바로 뜬다)
+const ai = await page.evaluate(() => window.__ai);
+assert.equal(new Set(ai).size, ai.length, `단어마다 한 번만 물어야 한다: ${ai.join(",")}`);
+
 const wrong = await page.evaluate(() => window.__wrong.map(w => w.en));
 assert.equal(wrong.length, 3, "오답노트에 담긴 개수(틀림2 + 포기1)");
 assert.equal(new Set(wrong).size, wrong.length, "같은 단어를 두 번 담지 않는다");
 
-console.log(`통과: 총 ${guard + 4}문제, 다시 나온 문제 ${retries}개, 오답노트 ${wrong.join(", ")}`);
+console.log(`통과: 첫 선지 ${first}ms / 다음 선지 ${second}ms, AI 호출 ${ai.length}회, 총 ${guard + 4}문제, 다시 나온 문제 ${retries}개, 오답노트 ${wrong.join(", ")}`);
 await browser.close();
 srv.close();
