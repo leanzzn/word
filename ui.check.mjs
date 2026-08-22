@@ -31,6 +31,7 @@ page.on("pageerror", e => { console.error("페이지 오류:", e.message); proce
 
 await page.evaluateOnNewDocument(words => {
   localStorage.appkey = "k"; localStorage.gkey = "k";
+  delete ReadableStream.prototype[Symbol.asyncIterator];   // 아이패드 사파리 흉내
   window.__wrong = [];
   window.__ai = [];                       // AI를 부른 단어들 (몇 번 부르는지 확인용)
   const slow = ms => new Promise(r => setTimeout(r, ms));
@@ -87,6 +88,11 @@ async function answer(correct) {
 }
 
 await page.goto(`http://127.0.0.1:${PORT}/index.html`);
+// 사파리에 없는 기능을 index.html이 채워 넣었는지 (pdf.js가 글자 뽑을 때 이걸 쓴다)
+assert.deepEqual(await page.evaluate(async () => {
+  const s = new ReadableStream({ start(c) { c.enqueue(1); c.enqueue(2); c.close(); } });
+  const got = []; for await (const v of s) got.push(v); return got;
+}), [1, 2]);
 await page.waitForSelector("#books .card");
 await page.click("#books .card .grow");
 await page.waitForSelector("#units .card");

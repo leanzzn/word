@@ -230,6 +230,18 @@ async function ai(parts, schema, extra = {}, timeoutMs = 20000) {
 }
 
 /* ── PDF에서 글자 뽑기 (브라우저가 처리) ──────────────── */
+// 사파리(아이패드)에는 스트림을 for await로 읽는 기능이 없다.
+// pdf.js가 글자를 뽑을 때 딱 그 방식을 쓰기 때문에 아이패드에서만 업로드가 터졌다.
+// 없으면 표준 방식(getReader)으로 같은 일을 하게 채워 넣는다. 있는 브라우저는 안 건드린다.
+ReadableStream.prototype[Symbol.asyncIterator] ??= function () {
+  const r = this.getReader();
+  return {
+    next: () => r.read(),
+    return: v => { r.releaseLock(); return Promise.resolve({ done: true, value: v }); },
+    [Symbol.asyncIterator]() { return this; },
+  };
+};
+
 let _pdfjs;
 async function pdfText(file) {
   const CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.2.108';
@@ -305,6 +317,8 @@ $('#up').onclick = async () => {
   try {
     const { cut, parseLocal, group } = await lib();
     msg('PDF에서 글자를 읽는 중...');
+    // 아이패드: iCloud/구글드라이브에 든 파일은 실제로 안 내려와 0바이트로 넘어온다
+    if (!f.size) throw '파일이 0바이트입니다. 파일 앱에서 아이패드로 먼저 내려받은 뒤 다시 올려주세요';
     const text = await pdfText(f);
     if (text.trim().length < 30) throw '글자가 없는 스캔본 PDF입니다. 글자가 들어있는 PDF로 올려주세요';
     const entries = parseLocal(cut(text));
@@ -320,7 +334,7 @@ $('#up').onclick = async () => {
     book = b;                              // 바로 유닛 목록으로 넘어간다
     unitNames = Object.keys(b.units);
     showUnits();
-  } catch (e) { msg('실패: ' + e); }
+  } catch (e) { msg(`실패: ${e?.name ? e.name + ': ' + e.message : e} (${(f.size / 1048576).toFixed(1)}MB)`); }
   $('#up').disabled = false;
 };
 
